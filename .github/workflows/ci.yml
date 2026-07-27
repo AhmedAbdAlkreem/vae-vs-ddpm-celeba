@@ -29,5 +29,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Debug
+        run: |
+          pwd
+          ls
+          find . -maxdepth 2 -type d
+          python -c "import os; print(os.getcwd())"
+          python -c "import sys; print(sys.path)"
+      
       - name: Run test suite
         run: pytest -v
