@@ -18,6 +18,7 @@ A from-scratch PyTorch implementation and head-to-head benchmark of two generati
 - [Dataset](#dataset)
 - [Configuration](#configuration)
 - [Usage](#usage)
+  - [Get Pretrained Weights](#get-pretrained-weights)
   - [Training](#training)
   - [Evaluation](#evaluation)
   - [Sampling](#sampling)
@@ -164,6 +165,32 @@ cfg.output_dir = "outputs"
 | `configs/training.py` | Epochs, batch size, learning rate, `use_perceptual_loss` flag |
 
 ## Usage
+
+### Get Pretrained Weights
+
+**Required** for Evaluation, Sampling, and Inference below — skip this only if you plan to run Training yourself first. Model weights exceed GitHub's file-size limits and are hosted on [Hugging Face Hub](https://huggingface.co/UseItOrLoseIt/vae-vs-ddpm-celeba) instead.
+
+**Method 1 — Hugging Face CLI (recommended):**
+
+```bash
+pip install -U huggingface_hub
+hf download UseItOrLoseIt/vae-vs-ddpm-celeba vae_best.pt --local-dir outputs/checkpoints
+hf download UseItOrLoseIt/vae-vs-ddpm-celeba ddpm_best.pt --local-dir outputs/checkpoints
+```
+
+**Method 2 — direct download (if the CLI is unavailable):**
+
+```bash
+mkdir -p outputs/checkpoints
+curl -L -o outputs/checkpoints/vae_best.pt https://huggingface.co/UseItOrLoseIt/vae-vs-ddpm-celeba/resolve/main/vae_best.pt
+curl -L -o outputs/checkpoints/ddpm_best.pt https://huggingface.co/UseItOrLoseIt/vae-vs-ddpm-celeba/resolve/main/ddpm_best.pt
+```
+
+Verify the download succeeded — expected sizes are **~34.7 MB** for `vae_best.pt` and **~107 MB** for `ddpm_best.pt`:
+
+```bash
+ls -lh outputs/checkpoints/
+```
 
 ### Training
 
