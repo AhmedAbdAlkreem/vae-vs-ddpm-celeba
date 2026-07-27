@@ -50,6 +50,8 @@ The implementation spans three iterated training versions (v1.0 → v1.2). Each 
 
 ## Architecture Overview
 
+![VAE and DDPM architecture diagram](outputs/architecture.svg)
+
 | | VAE | DDPM |
 |---|---|---|
 | **Core idea** | Encode to a low-dimensional Gaussian latent, decode back | Learn to reverse a fixed Markov noising process |
@@ -64,25 +66,27 @@ The implementation spans three iterated training versions (v1.0 → v1.2). Each 
 
 ```
 vae-vs-ddpm-celeba/
-├── train.py                   # Entry point: train VAE and DDPM
-├── evaluate.py                 # Entry point: compute metrics and visualizations
-├── sample.py                    # Entry point: generate samples from a trained model
-├── inference.py                   # Entry point: reconstruction / generation on custom input
-├── configs/                         # Dataset, model, diffusion, and training configuration
+├── train.py               # Entry point: train VAE and DDPM
+├── evaluate.py            # Entry point: compute metrics and visualizations
+├── sample.py              # Entry point: generate samples from a trained model
+├── inference.py           # Entry point: reconstruction / generation on custom input
+├── configs/               # Dataset, model, diffusion, and training configuration
 ├── src/
-│   ├── datasets/       # Dataset loading, transforms, and preprocessing
-│   ├── models/          # Encoder, decoder, VAE, U-Net, attention, noise schedule
+│   ├── datasets/          # Dataset loading, transforms, and preprocessing
+│   ├── models/            # Encoder, decoder, VAE, U-Net, attention, noise schedule
 │   ├── losses/            # VAE loss, diffusion loss, optional perceptual (VGG) loss
-│   ├── training/            # Trainers, optimizer/scheduler, callbacks, EMA
-│   ├── sampling/               # DDPM and DDIM samplers, latent and image samplers
-│   ├── evaluation/                # FID, Inception Score, reconstruction metrics
-│   ├── visualization/                # Sample grids, curves, latent space, denoising strip
-│   ├── utils/                          # Seeding, device, logging, checkpointing
-│   └── engine/                          # Orchestration layer (Trainer/Evaluator/Inferencer)
-├── scripts/                                # Utility scripts (e.g. comparison chart regeneration)
-├── notebooks/                                # Kaggle entry point notebook
-├── tests/                                     # Pytest sanity suite
-└── outputs/                                     # Checkpoints and results (v1.0, v1.1, v1.2, comparison)
+│   ├── training/          # Trainers, optimizer/scheduler, callbacks, EMA
+│   ├── sampling/          # DDPM and DDIM samplers, latent and image samplers
+│   ├── evaluation/        # FID, Inception Score, reconstruction metrics
+│   ├── visualization/     # Sample grids, curves, latent space, denoising strip
+│   ├── utils/             # Seeding, device, logging, checkpointing
+│   └── engine/            # Orchestration layer (Trainer/Evaluator/Inferencer)
+├── scripts/               # Utility scripts (e.g. comparison chart regeneration)
+├── notebooks/             # Kaggle entry point notebook
+├── tests/                 # Pytest sanity suite
+└── outputs/               # Checkpoints, logs, and results (v1.0, v1.1, v1.2, comparison)
+    ├── logs/              # Raw per-epoch training logs (vae.log, ddpm.log)
+    └── comparison/        # Version comparison and training curve charts
 ```
 
 > **Design note:** `src/engine/` does not duplicate `training/` or `evaluation/` logic — it only wires them together. Each unit of logic lives in exactly one place.
@@ -217,13 +221,24 @@ Three full training versions were completed, each documented in [CHANGELOG.md](C
 | DDPM sampler | ancestral, no x0 clipping | ancestral, x0 clipped | ancestral, x0 clipped |
 | U-Net attention | 8×8 only | 8×8 only | 8×8 + 16×16 |
 | Gradient clipping / LR decay | none | none | yes / yes |
-| VAE FID ↓ | 120.69 | 97.94 | **97.06** |
-| VAE Inception Score | 2.04 ± 0.06 | 2.00 ± 0.08 | 2.00 ± 0.06 |
+| VAE FID ↓ | 120.69 | 97.94 | **96.84** |
+| VAE Inception Score | 2.04 ± 0.06 | 2.00 ± 0.08 | 1.98 ± 0.05 |
 | VAE reconstruction PSNR ↑ | 22.27 dB | 22.48 dB | 22.47 dB |
 | **DDPM FID ↓** | 43.77 | 28.37 | **26.42** |
 | DDPM Inception Score | 2.79 ± 0.12 | 2.59 ± 0.13 | 2.61 ± 0.17 |
 
-**Overall change, v1.0 → v1.2: VAE FID −19.6%, DDPM FID −39.6%.**
+*v1.2 figures computed over 2,000 evaluation samples; see `results.json`.*
+
+### Training Curves
+
+![VAE and DDPM training curves](outputs/comparison/training_curves.png)
+
+Generated with `src/visualization/training_curves.py`, which parses the raw epoch-level training logs (`outputs/logs/vae.log`, `outputs/logs/ddpm.log`) and is resume-safe — both models were interrupted and resumed once during v1.2 training, and the script deduplicates by epoch number rather than assuming a single contiguous run.
+
+- **VAE:** reconstruction loss decreases monotonically from 5,080 to 282 over 40 epochs with no divergence or oscillation. KL divergence rises during the 6-epoch beta-warmup (`kl_w`: 0 → 1.0) as expected, then decreases smoothly once the full KL weight is applied — consistent with a stable, non-collapsed posterior rather than a warmup artifact.
+- **DDPM:** noise-prediction loss drops sharply over the first ~20 epochs (0.66 → 0.034) and then plateaus around 0.032–0.033 for the remainder of training, tracking the cosine learning-rate decay to zero. The flat tail indicates the model reached convergence within the 50-epoch budget rather than being cut off mid-training.
+
+**Overall change, v1.0 → v1.2: VAE FID −19.8%, DDPM FID −39.6%.**
 
 - **v1.0 → v1.1 (largest single jump):** fixed a sampling bug in which the ancestral DDPM sampler never clipped its intermediate predicted-x0 estimate back to the valid `[-1, 1]` pixel range. Over 1000 steps, this numerical drift compounded; an unclipped run was verified to produce pixel values from **−6.06 to 6.72**, manifesting as solid black/white panels in place of faces. This fix was combined with a larger training budget in the same version, so the FID gain reflects both factors together.
 - **v1.1 → v1.2 (smaller, incremental gain):** with the sampling bug already resolved, this iteration tested architectural refinements on a working baseline — cosine beta schedule, attention at an additional resolution, gradient clipping, and cosine LR decay. Smaller gains here match the expected pattern: large one-time wins from bug fixes, smaller incremental wins from tuning. None of the v1.2 changes affected the VAE, which explains its flat metrics.
@@ -267,7 +282,7 @@ No blank or corrupted panels remain. Every DDPM sample is a coherent face, with 
 
 | Model | FID ↓ | Inception Score ↑ | Reconstruction PSNR ↑ | Sampling cost |
 |---|---|---|---|---|
-| VAE | 97.06 | 2.00 ± 0.06 | 22.47 dB | 1 forward pass |
+| VAE | 96.84 | 1.98 ± 0.05 | 22.47 dB | 1 forward pass |
 | DDPM | 26.42 | 2.61 ± 0.17 | n/a | 1000 forward passes (full DDPM) |
 
 ## Roadmap
