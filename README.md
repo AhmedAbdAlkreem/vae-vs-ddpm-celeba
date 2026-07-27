@@ -67,6 +67,10 @@ The implementation spans three iterated training versions (v1.0 → v1.2). Each 
 
 ```
 vae-vs-ddpm-celeba/
+├── .github/
+│   └── workflows/
+│       └── ci.yml
+│ 
 ├── train.py               # Entry point: train VAE and DDPM
 ├── evaluate.py            # Entry point: compute metrics and visualizations
 ├── sample.py              # Entry point: generate samples from a trained model
