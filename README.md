@@ -71,27 +71,29 @@ vae-vs-ddpm-celeba/
 │   └── workflows/
 │       └── ci.yml
 │ 
-├── train.py               # Entry point: train VAE and DDPM
-├── evaluate.py            # Entry point: compute metrics and visualizations
-├── sample.py              # Entry point: generate samples from a trained model
-├── inference.py           # Entry point: reconstruction / generation on custom input
-├── configs/               # Dataset, model, diffusion, and training configuration
+├── train.py                     # Entry point: train VAE and DDPM
+├── evaluate.py                  # Entry point: compute metrics and visualizations
+├── sample.py                    # Entry point: generate samples from a trained model
+├── inference.py                 # Entry point: reconstruction / generation on custom input
+├── configs/                     # Dataset, model, diffusion, and training configuration
 ├── src/
-│   ├── datasets/          # Dataset loading, transforms, and preprocessing
-│   ├── models/            # Encoder, decoder, VAE, U-Net, attention, noise schedule
-│   ├── losses/            # VAE loss, diffusion loss, optional perceptual (VGG) loss
-│   ├── training/          # Trainers, optimizer/scheduler, callbacks, EMA
-│   ├── sampling/          # DDPM and DDIM samplers, latent and image samplers
-│   ├── evaluation/        # FID, Inception Score, reconstruction metrics
-│   ├── visualization/     # Sample grids, curves, latent space, denoising strip
-│   ├── utils/             # Seeding, device, logging, checkpointing
-│   └── engine/            # Orchestration layer (Trainer/Evaluator/Inferencer)
-├── scripts/               # Utility scripts (e.g. comparison chart regeneration)
-├── notebooks/             # Kaggle entry point notebook
-├── tests/                 # Pytest sanity suite
-└── outputs/               # Checkpoints, logs, and results (v1.0, v1.1, v1.2, comparison)
-    ├── logs/              # Raw per-epoch training logs (vae.log, ddpm.log)
-    └── comparison/        # Version comparison and training curve charts
+│   ├── datasets/                # Dataset loading, transforms, and preprocessing
+│   ├── models/                  # Encoder, decoder, VAE, U-Net, attention, noise schedule
+│   ├── losses/                  # VAE loss, diffusion loss, optional perceptual (VGG) loss
+│   ├── training/                # Trainers, optimizer/scheduler, callbacks, EMA
+│   ├── sampling/                # DDPM and DDIM samplers, latent and image samplers
+│   ├── evaluation/              # FID, Inception Score, reconstruction metrics
+│   ├── visualization/           # Sample grids, curves, latent space, denoising strip
+│   ├── utils/                   # Seeding, device, logging, checkpointing
+│   └── engine/                  # Orchestration layer (Trainer/Evaluator/Inferencer)
+├── scripts/                     # Utility scripts (e.g. comparison chart regeneration)
+├── notebooks/                   # Kaggle entry point notebook
+|   ├── kaggle_run.ipynb         # Kaggle entry point (writes this file tree, then runs it)
+│   └── benchmark_timing.ipynb   # Wall-clock benchmarking for VAE/DDPM/DDIM sampling cost
+├── tests/                       # Pytest sanity suite
+└── outputs/                     # Checkpoints, logs, and results (v1.0, v1.1, v1.2, comparison)
+    ├── logs/                    # Raw per-epoch training logs (vae.log, ddpm.log)
+    └── comparison/              # Version comparison and training curve charts
 ```
 
 > **Design note:** `src/engine/` does not duplicate `training/` or `evaluation/` logic — it only wires them together. Each unit of logic lives in exactly one place.
@@ -261,6 +263,17 @@ Three full training versions were completed, each documented in [CHANGELOG.md](C
 
 *v1.2 figures computed over 2,000 evaluation samples; see `results.json`.*
 
+| Model | Sampling cost | Wall-clock (Tesla T4) | Batch size |
+|---|---|---|---|
+| VAE  | 1 forward pass | ~0.19 sec per 1000 images | 64 |
+| DDPM (full) | 1000 forward passes | ~45.7 min per 1000 images | 32 |
+| DDIM (50 steps) | 50 forward passes | ~2.0 min per 1000 images | 32 |
+
+*Wall-clock times measured with `notebooks/benchmark_timing.ipynb` — timing
+depends on architecture and batch size, not on trained weights, so this
+notebook can be re-run standalone on any GPU session without loading
+checkpoints or the dataset.*
+
 ### Training Curves
 
 ![VAE and DDPM training curves](outputs/comparison/training_curves.png)
@@ -318,8 +331,6 @@ No blank or corrupted panels remain. Every DDPM sample is a coherent face, with 
 | DDPM | 26.42 | 2.61 ± 0.17 | n/a | 1000 forward passes (full DDPM) |
 
 ### Original vs. reconstruction vs. generation
-
-[#original-vs-reconstruction-vs-generation](#original-vs-reconstruction-vs-generation)
 
 The clearest way to see what each model is actually doing: take a real face,
 reconstruct it through the VAE, and compare that against each model
