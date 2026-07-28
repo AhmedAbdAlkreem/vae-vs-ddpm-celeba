@@ -225,6 +225,7 @@ Generates new samples from a trained model. `--model` accepts `vae` or `ddpm`; `
 ```bash
 python inference.py --reconstruct path/to/your_photo.jpg
 python inference.py --generate ddpm
+python inference.py --generate vae
 ```
 
 `--reconstruct` encodes and decodes a custom image through the VAE. `--generate` produces a new sample from the specified model.
@@ -315,6 +316,31 @@ No blank or corrupted panels remain. Every DDPM sample is a coherent face, with 
 |---|---|---|---|---|
 | VAE | 96.84 | 1.98 ± 0.05 | 22.47 dB | 1 forward pass |
 | DDPM | 26.42 | 2.61 ± 0.17 | n/a | 1000 forward passes (full DDPM) |
+
+### Original vs. reconstruction vs. generation
+
+[#original-vs-reconstruction-vs-generation](#original-vs-reconstruction-vs-generation)
+
+The clearest way to see what each model is actually doing: take a real face,
+reconstruct it through the VAE, and compare that against each model
+generating a face from scratch (no input image, just noise).
+
+| Original | VAE reconstruction | VAE generated | DDPM generated |
+|:---:|:---:|:---:|:---:|
+| ![original](outputs/v1.2/original.jpeg) | ![vae reconstruction](outputs/v1.2/vae_reconstruction.jpeg) | ![vae generated](outputs/v1.2/vae_generated.jpeg) | ![ddpm generated](outputs/v1.2/ddpm_generated.jpeg) |
+
+- **Original -> VAE reconstruction**: identity-relevant structure (hair
+color, pose, face geometry) survives the encode-decode round trip, but fine
+detail is lost — the direct visual meaning of the 22.47 dB reconstruction
+PSNR reported above.
+- **VAE generated**: sampling a fresh latent from `N(0,I)` and decoding
+produces a plausible but visibly soft face — same architecture-bound blur
+as the reconstruction, since generation and reconstruction share the same
+decoder.
+- **DDPM generated**: starting from pure noise and reversing through 1000
+steps produces the sharpest result of the three — hair strands, eye
+catchlights, and skin texture all render with photographic detail that
+neither VAE output achieves.
 
 ## Roadmap
 
