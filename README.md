@@ -316,10 +316,10 @@ No blank or corrupted panels remain. Every DDPM sample is a coherent face, with 
 
 | Visualization | What it shows | Evidence provided |
 |---|---|---|
-| ![VAE reconstructions](outputs/v1.2/vae_reconstructions.png) | Real image (top) vs. VAE reconstruction (bottom) | Identity-relevant structure (hair color, pose, geometry) is preserved while fine detail is lost — the direct visual meaning of the 22.47 dB reconstruction PSNR |
-| ![VAE latent space PCA](outputs/v1.2/vae_latent_pca.png) | PCA projection of 2,000 encoded latent vectors | A dense, roughly Gaussian cloud with no isolated clusters — confirms the encoder is not exhibiting posterior collapse |
-| ![VAE latent interpolation](outputs/v1.2/vae_interpolation.png) | Decoded interpolation between two random latent vectors | Smooth, gradual transitions with no abrupt jumps — evidence of a continuous, semantically meaningful latent space |
-| ![DDPM denoising strip](outputs/v1.2/ddpm_denoising_strip.png) | Intermediate snapshots from pure noise to final output | A face silhouette emerges only in the final third of the 1000-step trajectory, sharpening rapidly near the end |
+| ![VAE reconstructions](outputs/v1.2/reconstructions/vae_reconstructions.png) | Real image (top) vs. VAE reconstruction (bottom) | Identity-relevant structure (hair color, pose, geometry) is preserved while fine detail is lost — the direct visual meaning of the 22.47 dB reconstruction PSNR |
+| ![VAE latent space PCA](outputs/v1.2/latent_space/vae_latent_pca.png) | PCA projection of 2,000 encoded latent vectors | A dense, roughly Gaussian cloud with no isolated clusters — confirms the encoder is not exhibiting posterior collapse |
+| ![VAE latent interpolation](outputs/v1.2/interpolation/vae_interpolation.png) | Decoded interpolation between two random latent vectors | Smooth, gradual transitions with no abrupt jumps — evidence of a continuous, semantically meaningful latent space |
+| ![DDPM denoising strip](outputs/v1.2/denoising/ddpm_denoising_strip.png) | Intermediate snapshots from pure noise to final output | A face silhouette emerges only in the final third of the 1000-step trajectory, sharpening rapidly near the end |
 
 **Summary.** The v1.0 → v1.2 trajectory is visible qualitatively as well as numerically: a model that produced outright broken output roughly one in eight times now produces consistently coherent, often sharp results, while the VAE's characteristic blur — an architectural trait rather than a bug — remains stable across all three versions.
 
